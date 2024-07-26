@@ -790,6 +790,13 @@ bool CDockWidgetTab::event(QEvent *e)
 
 
 //============================================================================
+eDragState CDockWidgetTab::dragState() const
+{
+	return d->DragState;
+}
+
+
+//============================================================================
 void CDockWidgetTab::onDockWidgetFeaturesChanged()
 {
     d->updateCloseButtonSizePolicy();

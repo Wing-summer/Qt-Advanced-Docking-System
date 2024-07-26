@@ -178,6 +178,12 @@ public:
 	 */
 	void setIconSize(const QSize& Size);
 
+	/**
+	 * Returns the current drag state of this tab.
+	 * Use this function to determine if the tab is currently being dragged
+	 */
+	eDragState dragState() const;
+
 public Q_SLOTS:
 	virtual void setVisible(bool visible) override;
 

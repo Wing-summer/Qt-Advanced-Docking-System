@@ -473,6 +473,15 @@ bool CDockAreaTabBar::eventFilter(QObject *watched, QEvent *event)
          updateGeometry();
          break;
 
+    // Manage wheel event
+    case QEvent::Wheel:
+    	// Ignore wheel events if tab is currently dragged
+    	if (Tab->dragState() == DraggingInactive)
+    	{
+    		wheelEvent((QWheelEvent* )event);
+    	}
+        break;
+
 	default:
 		break;
 	}
