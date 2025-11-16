@@ -103,7 +103,7 @@ protected:
     /**
      * Saves the state into the given stream
      */
-    void saveState(QXmlStreamWriter& Stream) const;
+    virtual void saveState(QXmlStreamWriter& Stream) const;
 
     /**
      * This is a helper function for the dock manager to flag this widget
