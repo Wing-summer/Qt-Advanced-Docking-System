@@ -139,12 +139,10 @@ struct AutoHideTabPrivate
 	IFloatingWidget* createFloatingWidget(T* Widget)
 	{
 		auto w = new CFloatingDragPreview(Widget);
-		_this->connect(w, &CFloatingDragPreview::draggingCanceled, [this]()
-		{
-			DragState = DraggingInactive;
-		});
-		return w;
-	}
+        QObject::connect(w, &CFloatingDragPreview::draggingCanceled, _this,
+                         [this]() { DragState = DraggingInactive; });
+        return w;
+    }
 }; // struct DockWidgetTabPrivate
 
 
@@ -596,11 +594,12 @@ int CAutoHideTab::tabIndex() const
 //============================================================================
 void CAutoHideTab::onDragHoverDelayExpired()
 {
-	static const char* const PropertyId = "ActiveDragOverAutoHideContainer";
+    static constexpr const char* const PropertyId =
+        "ActiveDragOverAutoHideContainer";
 
-	// First we check if there is an active auto hide container that is visible
-	// In this case, we collapse it before we open the new one
-	auto v = d->DockWidget->dockManager()->property(PropertyId);
+    // First we check if there is an active auto hide container that is visible
+    // In this case, we collapse it before we open the new one
+    auto v = d->DockWidget->dockManager()->property(PropertyId);
 	if (v.isValid())
 	{
 		auto ActiveAutoHideContainer = v.value<QPointer<CAutoHideDockContainer>>();
