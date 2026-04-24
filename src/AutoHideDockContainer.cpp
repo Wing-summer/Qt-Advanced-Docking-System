@@ -44,12 +44,9 @@
 #include "AutoHideSideBar.h"
 #include "AutoHideTab.h"
 
-
-#include <iostream>
-
 namespace ads
 {
-static const int ResizeMargin = 30;
+static constexpr const int ResizeMargin = 30;
 
 //============================================================================
 bool static isHorizontalArea(SideBarLocation Area)
@@ -423,12 +420,13 @@ void CAutoHideDockContainer::moveContentsToParent()
 	auto preferred = d->DockWidget->preferredAutoHideSideBarLocation();
 	if (preferred != SideBarNone)
 	{
-		for (auto area : DockContainer->openedDockAreas())
-		{
-			if (!area || area->isAutoHide()) continue;
-			// Check if any widget in this area has the same preferred location
-			for (auto dw : area->dockWidgets())
-			{
+        for (auto& area : DockContainer->openedDockAreas())
+        {
+            if (!area || area->isAutoHide())
+                continue;
+            // Check if any widget in this area has the same preferred location
+            for (auto& dw : area->dockWidgets())
+            {
 				if (dw && dw->preferredAutoHideSideBarLocation() == preferred)
 				{
 					DockContainer->addDockWidget(CenterDockWidgetArea,
@@ -436,10 +434,10 @@ void CAutoHideDockContainer::moveContentsToParent()
 					return;
 				}
 			}
-		}
-	}
+        }
+    }
 
-	DockContainer->addDockWidget(targetArea, d->DockWidget);
+    DockContainer->addDockWidget(targetArea, d->DockWidget);
 }
 
 

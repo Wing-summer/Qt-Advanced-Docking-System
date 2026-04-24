@@ -43,13 +43,11 @@
 #include "DockManager.h"
 #include "DockAreaTabBar.h"
 
-#include <iostream>
-
 namespace ads
 {
-static const int AutoHideAreaWidth = 32;
-static const int AutoHideAreaMouseZone = 8;
-static const int InvalidTabIndex = -2;
+static constexpr const int AutoHideAreaWidth = 32;
+static constexpr const int AutoHideAreaMouseZone = 8;
+static constexpr const int InvalidTabIndex = -2;
 
 /**
  * Private data class of CDockOverlay
@@ -905,8 +903,8 @@ void CDockOverlayCross::updateOverlayIcons()
 		return;
 	}
 
-	for (auto Widget : d->DropIndicatorWidgets)
-	{
+    for (auto Widget : std::as_const(d->DropIndicatorWidgets))
+    {
 		d->updateDropIndicatorIcon(Widget);
 	}
 #if QT_VERSION >= 0x050600
@@ -1086,12 +1084,12 @@ void CDockOverlayCross::reset()
 //============================================================================
 void CDockOverlayCross::setIconColors(const QString& Colors)
 {
-	static const QMap<QString, int> ColorCompenentStringMap{
-		{"Frame", CDockOverlayCross::FrameColor},
-		{"Background", CDockOverlayCross::WindowBackgroundColor},
-		{"Overlay", CDockOverlayCross::OverlayColor},
-		{"Arrow", CDockOverlayCross::ArrowColor},
-		{"Shadow", CDockOverlayCross::ShadowColor}};
+    static const QMap<QString, int> ColorCompenentStringMap{
+        {"Frame", CDockOverlayCross::FrameColor},
+        {"Background", CDockOverlayCross::WindowBackgroundColor},
+        {"Overlay", CDockOverlayCross::OverlayColor},
+        {"Arrow", CDockOverlayCross::ArrowColor},
+        {"Shadow", CDockOverlayCross::ShadowColor}};
 
 #if (QT_VERSION < QT_VERSION_CHECK(5, 14, 0))
     auto SkipEmptyParts = QString::SkipEmptyParts;
@@ -1099,8 +1097,8 @@ void CDockOverlayCross::setIconColors(const QString& Colors)
     auto SkipEmptyParts = Qt::SkipEmptyParts;
 #endif
     auto ColorList = Colors.split(' ', SkipEmptyParts);
-	for (const auto& ColorListEntry : ColorList)
-	{
+    for (const auto& ColorListEntry : std::as_const(ColorList))
+    {
         auto ComponentColor = ColorListEntry.split('=', SkipEmptyParts);
 		int Component = ColorCompenentStringMap.value(ComponentColor[0], -1);
 		if (Component < 0)
