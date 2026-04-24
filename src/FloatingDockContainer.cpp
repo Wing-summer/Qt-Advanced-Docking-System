@@ -28,8 +28,6 @@
 //============================================================================
 #include "FloatingDockContainer.h"
 
-#include <iostream>
-
 #include <QBoxLayout>
 #include <QApplication>
 #include <QMouseEvent>
@@ -625,10 +623,10 @@ CFloatingDockContainer::CFloatingDockContainer(CDockManager *DockManager) :
 {
 	d->DockManager = DockManager;
 	d->DockContainer = new CDockContainerWidget(DockManager, this);
-	connect(d->DockContainer, SIGNAL(dockAreasAdded()), this,
-	    SLOT(onDockAreasAddedOrRemoved()));
-	connect(d->DockContainer, SIGNAL(dockAreasRemoved()), this,
-	    SLOT(onDockAreasAddedOrRemoved()));
+    connect(d->DockContainer, &CDockContainerWidget::dockAreasAdded, this,
+            &CFloatingDockContainer::onDockAreasAddedOrRemoved);
+    connect(d->DockContainer, &CDockContainerWidget::dockAreasRemoved, this,
+            &CFloatingDockContainer::onDockAreasAddedOrRemoved);
 
 #if defined(Q_OS_UNIX) && !defined(Q_OS_MACOS)
 	QDockWidget::setWidget(d->DockContainer);
@@ -682,10 +680,11 @@ CFloatingDockContainer::CFloatingDockContainer(CDockManager *DockManager) :
 		setTitleBarWidget(d->TitleBar);
 		setWindowFlags(Qt::Window | Qt::WindowMinMaxButtonsHint | Qt::FramelessWindowHint);
 		d->TitleBar->enableCloseButton(isClosable());
-		connect(d->TitleBar, SIGNAL(closeRequested()), SLOT(close()));
-		connect(d->TitleBar, &CFloatingWidgetTitleBar::maximizeRequested,
-				this, &CFloatingDockContainer::onMaximizeRequest);
-	}
+        connect(d->TitleBar, &CFloatingWidgetTitleBar::closeRequested, this,
+                &CFloatingDockContainer::close);
+        connect(d->TitleBar, &CFloatingWidgetTitleBar::maximizeRequested, this,
+                &CFloatingDockContainer::onMaximizeRequest);
+    }
 #else
 	setWindowFlags(
 	    Qt::Window | Qt::WindowMaximizeButtonHint | Qt::WindowCloseButtonHint);
@@ -769,25 +768,22 @@ void CFloatingDockContainer::deleteContent()
 	{
 		areas.push_back( dockContainer()->dockArea(i) );
 	}
-	for (auto area : areas)
-	{
-		if (!area)
-		{
-			continue;
-		}
+    for (auto& area : areas)
+    {
+        if (!area)
+        {
+            continue;
+        }
 
-		// QPointer delete safety - just in case some dock widget in destruction
-		// deletes another related/twin or child dock widget.
-		std::vector<QPointer<QWidget>> deleteWidgets;
-		for (auto widget : area->dockWidgets())
-		{
-			deleteWidgets.push_back(widget);
-		}
-		for (auto ptrWdg : deleteWidgets)
-		{
-			delete ptrWdg;
-		}
-	}
+        // QPointer delete safety - just in case some dock widget in destruction
+        // deletes another related/twin or child dock widget.
+        std::vector<QPointer<QWidget>> deleteWidgets;
+        for (auto& widget : area->dockWidgets())
+        {
+            deleteWidgets.push_back(widget);
+        }
+        qDeleteAll(deleteWidgets);
+    }
 }
 
 //============================================================================
@@ -927,26 +923,27 @@ void CFloatingDockContainer::closeEvent(QCloseEvent *event)
 	}
 
 	bool HasOpenDockWidgets = false;
-	for (auto DockWidget : d->DockContainer->openedDockWidgets())
-	{
-		if (DockWidget->features().testFlag(CDockWidget::DockWidgetDeleteOnClose) || DockWidget->features().testFlag(CDockWidget::CustomCloseHandling))
-		{
-			bool Closed = DockWidget->closeDockWidgetInternal();
-			if (!Closed)
-			{
-				HasOpenDockWidgets = true;
-			}
-		}
-		else
-		{
-			DockWidget->toggleView(false);
-		}
-	}
+    for (auto& DockWidget : d->DockContainer->openedDockWidgets())
+    {
+        if (DockWidget->features().testFlag(CDockWidget::DockWidgetDeleteOnClose)
+            || DockWidget->features().testFlag(CDockWidget::CustomCloseHandling))
+        {
+            bool Closed = DockWidget->closeDockWidgetInternal();
+            if (!Closed)
+            {
+                HasOpenDockWidgets = true;
+            }
+        }
+        else
+        {
+            DockWidget->toggleView(false);
+        }
+    }
 
-	if (HasOpenDockWidgets)
-	{
-		return;
-	}
+    if (HasOpenDockWidgets)
+    {
+        return;
+    }
 
 	// New bug (QWebEngineView reload side effect):
 	// when a WebEngine-based dock is tabified into a floating container, the
@@ -957,16 +954,16 @@ void CFloatingDockContainer::closeEvent(QCloseEvent *event)
 	// explicit close path.
 	d->HideContentOnNextHide = true;
 
-	// In Qt version after 5.9.2 there seems to be a bug that causes the
-	// QWidget::event() function to not receive any NonClientArea mouse
-	// events anymore after a close/show cycle. The bug is reported here:
-	// https://bugreports.qt.io/browse/QTBUG-73295
-	// The following code is a workaround for Qt versions > 5.9.2 that seems
-	// to work
-	// Starting from Qt version 5.12.2 this seems to work again. But
-	// now the QEvent::NonClientAreaMouseButtonPress function returns always
-	// Qt::RightButton even if the left button was pressed
-	this->hide();
+    // In Qt version after 5.9.2 there seems to be a bug that causes the
+    // QWidget::event() function to not receive any NonClientArea mouse
+    // events anymore after a close/show cycle. The bug is reported here:
+    // https://bugreports.qt.io/browse/QTBUG-73295
+    // The following code is a workaround for Qt versions > 5.9.2 that seems
+    // to work
+    // Starting from Qt version 5.12.2 this seems to work again. But
+    // now the QEvent::NonClientAreaMouseButtonPress function returns always
+    // Qt::RightButton even if the left button was pressed
+    this->hide();
 }
 
 //============================================================================
@@ -996,15 +993,15 @@ void CFloatingDockContainer::hideEvent(QHideEvent *event)
 	if ( d->AutoHideChildren )
 	{
 		d->Hiding = true;
-		for ( auto DockArea : d->DockContainer->openedDockAreas() )
-		{
-			for ( auto DockWidget : DockArea->openedDockWidgets() )
-			{
-				DockWidget->toggleView( false );
-			}
-		}
-		d->Hiding = false;
-	}
+        for (auto& DockArea : d->DockContainer->openedDockAreas())
+        {
+            for (auto& DockWidget : DockArea->openedDockWidgets())
+            {
+                DockWidget->toggleView(false);
+            }
+        }
+        d->Hiding = false;
+    }
 }
 
 
@@ -1102,16 +1099,16 @@ void CFloatingDockContainer::onDockAreasAddedOrRemoved()
 		d->SingleDockArea = TopLevelDockArea;
 		CDockWidget* CurrentWidget = d->SingleDockArea->currentDockWidget();
 		d->reflectCurrentWidget(CurrentWidget);
-		connect(d->SingleDockArea, SIGNAL(currentChanged(int)), this,
-		    SLOT(onDockAreaCurrentChanged(int)));
-	}
-	else
+        connect(d->SingleDockArea, &CDockAreaWidget::currentChanged, this,
+                &CFloatingDockContainer::onDockAreaCurrentChanged);
+    }
+    else
 	{
 		if (d->SingleDockArea)
 		{
-			disconnect(d->SingleDockArea, SIGNAL(currentChanged(int)), this,
-			    SLOT(onDockAreaCurrentChanged(int)));
-			d->SingleDockArea = nullptr;
+            disconnect(d->SingleDockArea, &CDockAreaWidget::currentChanged, this,
+                       &CFloatingDockContainer::onDockAreaCurrentChanged);
+            d->SingleDockArea = nullptr;
 		}
 		d->setWindowTitle(d->floatingContainersTitle());
 		setWindowIcon(QApplication::windowIcon());
@@ -1234,21 +1231,23 @@ void CFloatingDockContainer::finishDragging()
 // MIME type that transports the CFloatingDockContainer pointer between the
 // drag source and the CDockContainerWidget drop targets within this
 // application
-static const char* const FloatingWidgetMimeType = "application/x-ads-floating-dock-container";
+constexpr const char* const FloatingWidgetMimeType =
+    "application/x-ads-floating-dock-container";
 
 // MIME types that QWaylandDataDevice translates into an
 // xdg_toplevel_drag_v1 request so that the compositor attaches the floating
 // widget window to the drag cursor. The format matches
 // QMainWindowLayout::performPlatformWidgetDrag() in qtbase
-static const char* const PlatformDragWindowMimeType = "application/x-qt-mainwindowdrag-window";
-static const char* const PlatformDragPositionMimeType = "application/x-qt-mainwindowdrag-position";
+constexpr const char* const PlatformDragWindowMimeType =
+    "application/x-qt-mainwindowdrag-window";
+constexpr const char* const PlatformDragPositionMimeType =
+    "application/x-qt-mainwindowdrag-position";
 
 // Maximum age of the recorded drop candidate that startPlatformDrag() still
 // accepts as a drop. It must be longer than the interval between drag move
 // events (so a drop right after the last move counts) but short enough to
 // reject a release far away from the last drop area
-static const int PlatformDragDropCandidateTimeoutMs = 400;
-
+constexpr const int PlatformDragDropCandidateTimeoutMs = 400;
 
 // Records the last drop candidate during a Wayland platform drag. Some
 // compositors do not deliver a drop event when the dragged window overlaps
@@ -1261,25 +1260,34 @@ struct PlatformDragDropCandidate
 	bool ValidDropArea = false;
 	bool DropHandled = false;
 	QElapsedTimer SinceLastUpdate;
-};
-static PlatformDragDropCandidate s_PlatformDragDropCandidate;
 
+    inline void reset()
+    {
+        Container.clear();
+        GlobalPos = {};
+        ValidDropArea = false;
+        DropHandled = false;
+        SinceLastUpdate.invalidate();
+        SinceLastUpdate = {};
+    }
+};
+Q_GLOBAL_STATIC(PlatformDragDropCandidate, s_PlatformDragDropCandidate);
 
 //============================================================================
 void CFloatingDockContainer::platformDragUpdateDropCandidate(
 	CDockContainerWidget* Container, const QPoint& GlobalPos, bool ValidDropArea)
 {
-	s_PlatformDragDropCandidate.Container = Container;
-	s_PlatformDragDropCandidate.GlobalPos = GlobalPos;
-	s_PlatformDragDropCandidate.ValidDropArea = ValidDropArea;
-	s_PlatformDragDropCandidate.SinceLastUpdate.start();
+    s_PlatformDragDropCandidate->Container = Container;
+    s_PlatformDragDropCandidate->GlobalPos = GlobalPos;
+    s_PlatformDragDropCandidate->ValidDropArea = ValidDropArea;
+    s_PlatformDragDropCandidate->SinceLastUpdate.start();
 }
 
 
 //============================================================================
 void CFloatingDockContainer::platformDragNotifyDropHandled()
 {
-	s_PlatformDragDropCandidate.DropHandled = true;
+    s_PlatformDragDropCandidate->DropHandled = true;
 }
 
 
@@ -1372,43 +1380,44 @@ Qt::DropAction CFloatingDockContainer::startPlatformDrag(
 	// which deletes the floating widget before exec() returns
 	QPointer<CFloatingDockContainer> GuardedFloatingWidget(FloatingWidget);
 	auto DockManager = FloatingWidget->dockContainer()->dockManager();
-	s_PlatformDragDropCandidate = PlatformDragDropCandidate();
-	// The QDrag::exec() return value does not reliably encode whether the
-	// floating widget was docked on Wayland (e.g. compositors that send a
-	// leave event instead of a drop event report Qt::IgnoreAction even though
-	// the drag ended over a drop area). Track the docking outcome explicitly
-	// instead and translate it into the documented return value below.
-	Drag->exec();
+    s_PlatformDragDropCandidate->reset();
+    // The QDrag::exec() return value does not reliably encode whether the
+    // floating widget was docked on Wayland (e.g. compositors that send a
+    // leave event instead of a drop event report Qt::IgnoreAction even though
+    // the drag ended over a drop area). Track the docking outcome explicitly
+    // instead and translate it into the documented return value below.
+    Drag->exec();
 
-	// Some compositors (e.g. Mutter) do not deliver a drop event to the
-	// target container when the dragged window overlaps it - they send a
-	// leave event on release instead. If no drop event was delivered, but
-	// the drag ended over a valid drop area, dock the floating widget into
-	// the recorded candidate. A short timeout distinguishes a drop on a
-	// drop area from a release outside of any drop area to keep the widget
-	// floating
-	auto& Candidate = s_PlatformDragDropCandidate;
-	bool Docked = Candidate.DropHandled;
-	if (!Candidate.DropHandled && !GuardedFloatingWidget.isNull()
-	 && Candidate.Container && Candidate.ValidDropArea
-	 && Candidate.SinceLastUpdate.isValid()
-	 && Candidate.SinceLastUpdate.elapsed() < PlatformDragDropCandidateTimeoutMs)
-	{
-		Candidate.Container->dropFloatingWidget(GuardedFloatingWidget,
-			Candidate.GlobalPos);
-		Docked = true;
-	}
-	s_PlatformDragDropCandidate = PlatformDragDropCandidate();
-	DockManager->containerOverlay()->hideOverlay();
-	DockManager->dockAreaOverlay()->hideOverlay();
-	Drag->deleteLater();
+    // Some compositors (e.g. Mutter) do not deliver a drop event to the
+    // target container when the dragged window overlaps it - they send a
+    // leave event on release instead. If no drop event was delivered, but
+    // the drag ended over a valid drop area, dock the floating widget into
+    // the recorded candidate. A short timeout distinguishes a drop on a
+    // drop area from a release outside of any drop area to keep the widget
+    // floating
+    auto& Candidate = s_PlatformDragDropCandidate;
+    bool Docked = Candidate->DropHandled;
+    if (!Candidate->DropHandled && !GuardedFloatingWidget.isNull()
+        && Candidate->Container && Candidate->ValidDropArea
+        && Candidate->SinceLastUpdate.isValid()
+        && Candidate->SinceLastUpdate.elapsed()
+               < PlatformDragDropCandidateTimeoutMs)
+    {
+        Candidate->Container->dropFloatingWidget(GuardedFloatingWidget,
+                                                 Candidate->GlobalPos);
+        Docked = true;
+    }
+    s_PlatformDragDropCandidate->reset();
+    DockManager->containerOverlay()->hideOverlay();
+    DockManager->dockAreaOverlay()->hideOverlay();
+    Drag->deleteLater();
 
-	if (GuardedFloatingWidget)
-	{
-		GuardedFloatingWidget->d->setState(DraggingInactive);
-	}
+    if (GuardedFloatingWidget)
+    {
+        GuardedFloatingWidget->d->setState(DraggingInactive);
+    }
 
-	return Docked ? Qt::MoveAction : Qt::IgnoreAction;
+    return Docked ? Qt::MoveAction : Qt::IgnoreAction;
 }
 
 

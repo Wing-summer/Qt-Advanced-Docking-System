@@ -28,37 +28,38 @@
 //============================================================================
 //                                   INCLUDES
 //============================================================================
-#include <AutoHideDockContainer.h>
-#include <AutoHideTab.h>
 #include "DockAreaWidget.h"
 
-#include <QStackedLayout>
-#include <QScrollBar>
-#include <QStyle>
-#include <QPushButton>
 #include <QDebug>
-#include <QMenu>
-#include <QXmlStreamWriter>
 #include <QList>
+#include <QMenu>
+#include <QPointer>
+#include <QPushButton>
+#include <QScrollBar>
+#include <QStackedLayout>
+#include <QStyle>
+#include <QWidget>
+#include <QXmlStreamWriter>
 
-#include "ElidingLabel.h"
-#include "DockContainerWidget.h"
-#include "DockWidget.h"
-#include "FloatingDockContainer.h"
-#include "DockManager.h"
-#include "DockOverlay.h"
+#include <AutoHideDockContainer.h>
+#include <AutoHideTab.h>
+
 #include "DockAreaTabBar.h"
-#include "DockSplitter.h"
 #include "DockAreaTitleBar.h"
 #include "DockComponentsFactory.h"
+#include "DockContainerWidget.h"
+#include "DockManager.h"
+#include "DockSplitter.h"
+#include "DockWidget.h"
 #include "DockWidgetTab.h"
 #include "DockingStateReader.h"
-
+#include "ElidingLabel.h"
+#include "FloatingDockContainer.h"
 
 namespace ads
 {
-static const char* const INDEX_PROPERTY = "index";
-static const char* const ACTION_PROPERTY = "action";
+static constexpr const char* const INDEX_PROPERTY = "index";
+static constexpr const char* const ACTION_PROPERTY = "action";
 
 /**
  * Check, if auto hide is enabled
@@ -248,8 +249,7 @@ public:
 
 
 using DockAreaLayout = CDockAreaLayout;
-static const DockWidgetAreas DefaultAllowedAreas = AllDockAreas;
-
+static constexpr const DockWidgetAreas DefaultAllowedAreas = AllDockAreas;
 
 /**
  * Private data class of CDockAreaWidget class (pimpl)
@@ -908,7 +908,7 @@ void CDockAreaWidget::updateTitleBarVisibility()
                 {
                     Hidden = true;
 
-                    for (CDockWidget* DockWidget : Container->openedDockWidgets())
+                    for (auto& DockWidget : Container->openedDockWidgets())
                     {
                         if (!DockWidget->titleBarActions().empty())
                         {
@@ -1176,21 +1176,21 @@ CDockWidget::DockWidgetFeatures CDockAreaWidget::features(eBitwiseOperator Mode)
 	if (BitwiseAnd == Mode)
 	{
 		CDockWidget::DockWidgetFeatures Features(CDockWidget::AllDockWidgetFeatures);
-		for (const auto DockWidget : dockWidgets())
-		{
-			Features &= DockWidget->features();
-		}
-		return Features;
-	}
-	else
-	{
+        for (auto& DockWidget : dockWidgets())
+        {
+            Features &= DockWidget->features();
+        }
+        return Features;
+    }
+    else
+    {
 		CDockWidget::DockWidgetFeatures Features(CDockWidget::NoDockWidgetFeatures);
-		for (const auto DockWidget : dockWidgets())
-		{
-			Features |= DockWidget->features();
-		}
-		return Features;
-	}
+        for (auto& DockWidget : dockWidgets())
+        {
+            Features |= DockWidget->features();
+        }
+        return Features;
+    }
 }
 
 
@@ -1279,7 +1279,7 @@ void CDockAreaWidget::closeArea()
 	}
     else
 	{
-        for (auto DockWidget : openedDockWidgets())
+        for (auto& DockWidget : openedDockWidgets())
         {
 			if ((DockWidget->features().testFlag(CDockWidget::DockWidgetDeleteOnClose) && DockWidget->features().testFlag(CDockWidget::DockWidgetForceCloseWithArea)) ||
 				DockWidget->features().testFlag(CDockWidget::CustomCloseHandling))
@@ -1332,14 +1332,14 @@ SideBarLocation CDockAreaWidget::calculateSideTabBarArea() const
 	DockAreaRect.moveTo(DockAreaTopLeft);
 	const qreal aspectRatio = DockAreaRect.width() / (qMax(1, DockAreaRect.height()) * 1.0);
 	const qreal sizeRatio = (qreal)ContentRect.width() / DockAreaRect.width();
-	static const int MinBorderDistance = 16;
-	bool HorizontalOrientation = (aspectRatio > 1.0) && (sizeRatio < 3.0);
+    constexpr const int MinBorderDistance = 16;
+    bool HorizontalOrientation = (aspectRatio > 1.0) && (sizeRatio < 3.0);
 
-	// measure border distances - a distance less than 16 px means we touch the
-	// border
-	int BorderDistance[4];
+    // measure border distances - a distance less than 16 px means we touch the
+    // border
+    int BorderDistance[4];
 
-	int Distance = qAbs(ContentRect.topLeft().y() - DockAreaRect.topLeft().y());
+    int Distance = qAbs(ContentRect.topLeft().y() - DockAreaRect.topLeft().y());
 	BorderDistance[SideBarLocation::SideBarTop] = (Distance < MinBorderDistance) ? 0 : Distance;
 	if (!BorderDistance[SideBarLocation::SideBarTop])
 	{
@@ -1425,9 +1425,9 @@ void CDockAreaWidget::setAutoHide(bool Enable, SideBarLocation Location, int Tab
 	}
 
 	auto area = (SideBarNone == Location) ? calculateSideTabBarArea() : Location;
-	for (const auto DockWidget : openedDockWidgets())
-	{
-		if (Enable == isAutoHide())
+    for (auto& DockWidget : openedDockWidgets())
+    {
+        if (Enable == isAutoHide())
 		{
 			continue;
 		}
@@ -1438,7 +1438,7 @@ void CDockAreaWidget::setAutoHide(bool Enable, SideBarLocation Location, int Tab
 		}
 
 		dockContainer()->createAndSetupAutoHideContainer(area, DockWidget, TabIndex++);
-	}
+    }
 }
 
 
@@ -1484,8 +1484,8 @@ bool CDockAreaWidget::isCentralWidgetArea() const
 bool CDockAreaWidget::containsCentralWidget() const
 {
 	auto centralWidget = dockManager()->centralWidget();
-	for (const auto &dockWidget : dockWidgets())
-	{
+    for (auto& dockWidget : dockWidgets())
+    {
 		if (dockWidget == centralWidget)
 		{
 			return true;

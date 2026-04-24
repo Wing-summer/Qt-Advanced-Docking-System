@@ -152,22 +152,20 @@ enum eBitwiseOperator
  */
 enum SideBarLocation
 {
-	SideBarTop,
-	SideBarLeft,
-	SideBarRight,
-	SideBarBottom,
-	SideBarNone
+    SideBarTop,
+    SideBarLeft,
+    SideBarRight,
+    SideBarBottom,
+    SideBarNone
 };
-Q_ENUMS(SideBarLocation)
-
 
 namespace internal
 {
-static const bool RestoreTesting = true;
-static const bool Restore = false;
-static const char* const ClosedProperty = "close";
-static const char* const DirtyProperty = "dirty";
-static const char* const LocationProperty = "Location";
+static constexpr const bool RestoreTesting = true;
+static constexpr const bool Restore = false;
+static constexpr const char* const ClosedProperty = "close";
+static constexpr const char* const DirtyProperty = "dirty";
+static constexpr const char* const LocationProperty = "Location";
 extern const int FloatingWidgetDragStartEvent;
 extern const int DockedWidgetDragStartEvent;
 
