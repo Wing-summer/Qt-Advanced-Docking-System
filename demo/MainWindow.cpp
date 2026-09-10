@@ -1010,10 +1010,13 @@ void CMainWindow::toggleDockWidgetWindowTitle()
 void CMainWindow::applyVsStyle()
 {
 	QFile StyleSheetFile(":adsdemo/res/visual_studio_light.css");
-	StyleSheetFile.open(QIODevice::ReadOnly);
-	QTextStream StyleSheetStream(&StyleSheetFile);
-	auto Stylesheet = StyleSheetStream.readAll();
-	StyleSheetFile.close();
+	QString Stylesheet;
+	if (StyleSheetFile.open(QIODevice::ReadOnly))
+	{
+		QTextStream StyleSheetStream(&StyleSheetFile);
+		Stylesheet = StyleSheetStream.readAll();
+		StyleSheetFile.close();
+	}
 	d->DockManager->setStyleSheet(Stylesheet);
 }
 

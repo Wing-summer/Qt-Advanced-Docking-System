@@ -55,9 +55,11 @@ int main(int argc, char *argv[])
 	mw.show();
 
 	QFile StyleSheetFile(":/adsdemo/app.css");
-	StyleSheetFile.open(QIODevice::ReadOnly);
-	QTextStream StyleSheetStream(&StyleSheetFile);
-	a.setStyleSheet(StyleSheetStream.readAll());
-	StyleSheetFile.close();
+	if (StyleSheetFile.open(QIODevice::ReadOnly))
+	{
+		QTextStream StyleSheetStream(&StyleSheetFile);
+		a.setStyleSheet(StyleSheetStream.readAll());
+		StyleSheetFile.close();
+	}
 	return a.exec();
 }

@@ -227,10 +227,12 @@ void DockManagerPrivate::loadStylesheet()
         CurrentStylesheetDark = false;
     FileName += ".css";
 	QFile StyleSheetFile(FileName);
-	StyleSheetFile.open(QIODevice::ReadOnly);
-	QTextStream StyleSheetStream(&StyleSheetFile);
-	Result = StyleSheetStream.readAll();
-	StyleSheetFile.close();
+	if (StyleSheetFile.open(QIODevice::ReadOnly))
+	{
+		QTextStream StyleSheetStream(&StyleSheetFile);
+		Result = StyleSheetStream.readAll();
+		StyleSheetFile.close();
+	}
 	_this->setStyleSheet(Result);
 }
 
@@ -749,7 +751,7 @@ bool CDockManager::eventFilter(QObject *obj, QEvent *e)
 		}
 		if (!window()->isMinimized())
 		{
-			QApplication::setActiveWindow(window());
+			window()->activateWindow();
 		}
 	}
 #else
