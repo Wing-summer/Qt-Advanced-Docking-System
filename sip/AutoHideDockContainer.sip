@@ -18,7 +18,6 @@ protected:
 	virtual void leaveEvent(QEvent *event);
 	virtual bool event(QEvent* event);
 	void updateSize();
-	void saveState(QXmlStreamWriter& Stream);
 
 public:
 	CAutoHideDockContainer(ads::CDockWidget* DockWidget /Transfer/, ads::SideBarLocation area,

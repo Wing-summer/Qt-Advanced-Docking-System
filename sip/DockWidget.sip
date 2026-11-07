@@ -15,7 +15,7 @@ protected:
     void setDockManager(ads::CDockManager* DockManager /Transfer/ );
     void setDockArea(ads::CDockAreaWidget* DockArea /Transfer/ );
     void setToggleViewActionChecked(bool Checked);
-    void saveState(QXmlStreamWriter& Stream) const;
+    virtual bool isStateSaveEnabled() const;
     void flagAsUnassigned();
     static void emitTopLevelEventForWidget(ads::CDockWidget* TopLevelDockWidget, bool Floating);
     void emitTopLevelChanged(bool Floating);

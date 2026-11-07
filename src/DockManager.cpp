@@ -23,46 +23,44 @@
 /// \date   26.02.2017
 /// \brief  Implementation of CDockManager class
 //============================================================================
-
-
-//============================================================================
 //                                   INCLUDES
 //============================================================================
-#include <AutoHideDockContainer.h>
-#include "DockWidgetTab.h"
 #include "DockManager.h"
+
+#include <QAction>
+#include <QApplication>
+#include <QDebug>
+#include <QDialog>
+#include <QFile>
+#include <QList>
+#include <QMainWindow>
+#include <QMap>
+#include <QMenu>
+#include <QScopeGuard>
+#include <QScopedValueRollback>
+#include <QSettings>
+#include <QStyleHints>
+#include <QVariant>
+#include <QVector>
+#include <QWindow>
+#include <QWindowStateChangeEvent>
+
+#include <AutoHideDockContainer.h>
 
 #include <algorithm>
 
-#include <QMainWindow>
-#include <QList>
-#include <QMap>
-#include <QVariant>
-#include <QDebug>
-#include <QFile>
-#include <QDialog>
-#include <QAction>
-#include <QXmlStreamWriter>
-#include <QSettings>
-#include <QMenu>
-#include <QApplication>
-#include <QWindow>
-#include <QWindowStateChangeEvent>
-#include <QVector>
-#include <QStyleHints>
-
-#include "FloatingDockContainer.h"
-#include "DockOverlay.h"
-#include "DockWidget.h"
-#include "ads_globals.h"
-#include "DockAreaWidget.h"
-#include "IconProvider.h"
-#include "DockingStateReader.h"
 #include "DockAreaTitleBar.h"
-#include "DockFocusController.h"
-#include "DockSplitter.h"
+#include "DockAreaWidget.h"
 #include "DockComponentsFactory.h"
-
+#include "DockFocusController.h"
+#include "DockOverlay.h"
+#include "DockSplitter.h"
+#include "DockWidget.h"
+#include "DockWidgetTab.h"
+#include "DockingState.h"
+#include "FloatingDockContainer.h"
+#include "IconProvider.h"
+#include "ads_globals.h"
 
 #if defined(Q_OS_UNIX) && !defined(Q_OS_MACOS)
 #include "linux/FloatingWidgetTitleBar.h"
@@ -89,13 +87,6 @@ namespace ads
 /**
  * Internal file version in case the structure changes internally
  */
-enum eStateFileVersion
-{
-	InitialVersion = 0,      //!< InitialVersion
-	Version1 = 1,            //!< Version1
-	CurrentVersion = Version1//!< CurrentVersion
-};
-
 Q_GLOBAL_STATIC_WITH_ARGS(CDockManager::ConfigFlags, StaticConfigFlags,
                           (CDockManager::DefaultNonOpaqueConfig));
 // auto hide feature is disabled by default
@@ -143,22 +134,6 @@ struct DockManagerPrivate
 	 */
 	DockManagerPrivate(CDockManager* _public);
 
-	/**
-	 * Checks if the given data stream is a valid docking system state
-	 * file.
-	 */
-	bool checkFormat(const QByteArray &state, int version);
-
-	/**
-	 * Restores the state
-	 */
-	bool restoreStateFromXml(const QByteArray &state, int version, bool Testing = internal::Restore);
-
-	/**
-	 * Restore state
-	 */
-	bool restoreState(const QByteArray &state, int version);
-
 	void restoreDockWidgetsOpenState();
 	void restoreDockAreasIndices();
 	void emitTopLevelEvents();
@@ -182,11 +157,6 @@ struct DockManagerPrivate
             DockWidget->setProperty(internal::DirtyProperty, true);
         }
     }
-
-    /**
-     * Restores the container with the given index
-     */
-    bool restoreContainer(int Index, CDockingStateReader& stream, bool Testing);
 
     /**
      * Loads the stylesheet
@@ -238,150 +208,6 @@ void DockManagerPrivate::loadStylesheet()
 		StyleSheetFile.close();
 	}
 	_this->setStyleSheet(Result);
-}
-
-
-//============================================================================
-bool DockManagerPrivate::restoreContainer(int Index, CDockingStateReader& stream, bool Testing)
-{
-	if (Testing)
-	{
-		Index = 0;
-	}
-
-	bool Result = false;
-	if (Index >= Containers.count())
-	{
-		CFloatingDockContainer* FloatingWidget = new CFloatingDockContainer(_this);
-		Result = FloatingWidget->restoreState(stream, Testing);
-	}
-	else
-	{
-        ADS_PRINT("d->Containers[i]->restoreState ");
-		auto Container = Containers[Index];
-		if (Container->isFloating())
-		{
-			Result = Container->floatingWidget()->restoreState(stream, Testing);
-		}
-		else
-		{
-			Result = Container->restoreState(stream, Testing);
-		}
-	}
-
-	return Result;
-}
-
-
-//============================================================================
-bool DockManagerPrivate::checkFormat(const QByteArray &state, int version)
-{
-    return restoreStateFromXml(state, version, internal::RestoreTesting);
-}
-
-
-//============================================================================
-bool DockManagerPrivate::restoreStateFromXml(const QByteArray &state,  int version,
-	bool Testing)
-{
-	Q_UNUSED(version);
-
-    if (state.isEmpty())
-    {
-        return false;
-    }
-    CDockingStateReader s(state);
-    s.readNextStartElement();
-    if (s.name() != QLatin1String("QtAdvancedDockingSystem"))
-    {
-    	return false;
-    }
-    ADS_PRINT(s.attributes().value("Version"));
-    bool ok;
-    int v = s.attributes().value("Version").toInt(&ok);
-    if (!ok || v > CurrentVersion)
-    {
-    	return false;
-    }
-    s.setFileVersion(v);
-
-    ADS_PRINT(s.attributes().value("UserVersion"));
-    // Older files do not support UserVersion but we still want to load them so
-    // we first test if the attribute exists
-    if (!s.attributes().value("UserVersion").isEmpty())
-    {
-		v = s.attributes().value("UserVersion").toInt(&ok);
-		if (!ok || v != version)
-		{
-			return false;
-		}
-    }
-
-    bool Result = true;
-#ifdef ADS_DEBUG_PRINT
-    int  DockContainers = s.attributes().value("Containers").toInt();
-#endif
-    ADS_PRINT(DockContainers);
-
-    if (CentralWidget)
-    {
-		const auto CentralWidgetAttribute = s.attributes().value("CentralWidget");
-		// If we have a central widget but a state without central widget, then
-		// something is wrong.
-		if (CentralWidgetAttribute.isEmpty())
-		{
-			qWarning() << "Dock manager has central widget but saved state does not have central widget.";
-			return false;
-		}
-
-		// If the object name of the central widget does not match the name of the
-		// saved central widget, the something is wrong
-		if (CentralWidget->objectName() != CentralWidgetAttribute.toString())
-		{
-			qWarning() << "Object name of central widget does not match name of central widget in saved state.";
-			return false;
-		}
-    }
-
-	if (!Testing)
-	{
-		// Store the saved focused dock widget name so it can be reapplied after stale focus styling is cleared.
-		RestoredFocusedDockWidget = s.attributes().value("FocusedDockWidget").toString();
-	}
-
-    int DockContainerCount = 0;
-    while (s.readNextStartElement())
-    {
-        if (s.name() == QLatin1String("Container"))
-    	{
-    		Result = restoreContainer(DockContainerCount, s, Testing);
-			if (!Result)
-			{
-				break;
-			}
-			DockContainerCount++;
-    	}
-    }
-
-    if (!Testing)
-    {
-		// Delete remaining empty floating widgets
-		int FloatingWidgetIndex = DockContainerCount - 1;
-		for (int i = FloatingWidgetIndex; i < FloatingWidgets.count(); ++i)
-		{
-			CFloatingDockContainer* floatingWidget = FloatingWidgets[i];
-			if (!floatingWidget) continue;
-			// Use removeFromDockManager() (introduced in upstream commit 544c624) instead
-			// of removeDockContainer() so the container's back-pointer to the manager is
-			// cleared. Otherwise ~CDockContainerWidget() (called when deleteLater() fires)
-			// would try to remove this container a second time, tripping the
-			// Q_ASSERT(removed == 1) check in CDockManager::removeDockContainer().
-			floatingWidget->dockContainer()->removeFromDockManager();
-			floatingWidget->deleteLater();
-		}
-    }
-
-    return Result;
 }
 
 
@@ -474,35 +300,6 @@ void DockManagerPrivate::emitTopLevelEvents()
             }
         }
     }
-}
-
-
-//============================================================================
-bool DockManagerPrivate::restoreState(const QByteArray& State, int version)
-{
-	QByteArray state = State.startsWith("<?xml") ? State : qUncompress(State);
-    if (!checkFormat(state, version))
-    {
-        ADS_PRINT("checkFormat: Error checking format!!!!!!!");
-    	return false;
-    }
-
-    // Hide updates of floating widgets from use
-    hideFloatingWidgets();
-    markDockWidgetsDirty();
-
-    if (!restoreStateFromXml(state, version))
-    {
-        ADS_PRINT("restoreState: Error restoring state!!!!!!!");
-    	return false;
-    }
-
-    restoreDockWidgetsOpenState();
-    restoreDockAreasIndices();
-    emitTopLevelEvents();
-    _this->dumpLayout();
-
-    return true;
 }
 
 
@@ -882,77 +679,133 @@ unsigned int CDockManager::zOrderIndex() const
 //============================================================================
 QByteArray CDockManager::saveState(int version) const
 {
-    QByteArray xmldata;
-    QXmlStreamWriter s(&xmldata);
-    auto ConfigFlags = CDockManager::configFlags();
-	s.setAutoFormatting(ConfigFlags.testFlag(XmlAutoFormattingEnabled));
-    s.writeStartDocument();
-		s.writeStartElement("QtAdvancedDockingSystem");
-		s.writeAttribute("Version", QString::number(CurrentVersion));
-		s.writeAttribute("UserVersion", QString::number(version));
-		s.writeAttribute("Containers", QString::number(d->Containers.count()));
-		if (d->CentralWidget)
-		{
-			s.writeAttribute("CentralWidget", d->CentralWidget->objectName());
-		}
-		if (auto FocusedDockWidget = focusedDockWidget())
-		{
-			s.writeAttribute("FocusedDockWidget", FocusedDockWidget->objectName());
-		}
-		for (auto Container : d->Containers)
-		{
-			Container->saveState(s);
-		}
-
-        s.writeEndElement();
-        s.writeEndDocument();
-
-        return ConfigFlags.testFlag(XmlCompressionEnabled) ?
-                   qCompress(xmldata, 9) :
-                   xmldata;
+    state::Layout layout;
+    if (d->CentralWidget)
+    {
+        layout.centralWidget = d->CentralWidget->objectName();
+    }
+    if (auto focused = focusedDockWidget())
+    {
+        layout.focusedWidget = focused->objectName();
+    }
+    for (auto container : d->Containers)
+    {
+        layout.containers.append(container->saveState());
+    }
+    return state::encode(layout, version);
 }
 
 
 //============================================================================
-bool CDockManager::restoreState(const QByteArray &state, int version)
+bool CDockManager::restoreState(const QByteArray& data, int version)
 {
-	// Prevent multiple calls as long as state is not restore. This may
-	// happen, if QApplication::processEvents() is called somewhere
-	if (d->RestoringState)
-	{
-		return false;
-	}
-
-	// We hide the complete dock manager here. Restoring the state means
-	// that DockWidgets are removed from the DockArea internal stack layout
-	// which in turn  means, that each time a widget is removed the stack
-	// will show and raise the next available widget which in turn
-	// triggers show events for the dock widgets. To avoid this we hide the
-	// dock manager. Because there will be no processing of application
-	// events until this function is finished, the user will not see this
-	// hiding
-	bool IsHidden = this->isHidden();
-	if (!IsHidden)
-	{
-		hide();
-	}
-	d->RestoringState = true;
-	Q_EMIT restoringState();
-	bool Result = d->restoreState(state, version);
-	d->RestoringState = false;
-	if (!IsHidden)
-	{
-		show();
-	}
-	Q_EMIT stateRestored();
-	if (Result && !d->RestoredFocusedDockWidget.isEmpty())
-	{
-		if (auto DockWidget = findDockWidget(d->RestoredFocusedDockWidget))
-		{
-			setDockWidgetFocused(DockWidget);
-		}
-	}
-	return Result;
+    if (d->RestoringState)
+    {
+        return false;
+    }
+    state::Layout layout;
+    if (!state::decode(data, version, layout)
+        || (d->CentralWidget
+            && layout.centralWidget != d->CentralWidget->objectName()))
+    {
+        return false;
+    }
+    QHash<QString, CDockWidget*> widgets;
+    for (auto it = d->DockWidgetsMap.cbegin(); it != d->DockWidgetsMap.cend();
+         ++it)
+    {
+        widgets.insert(it.key(), it.value());
+    }
+    const bool wasHidden = isHidden();
+    // updatesEnabled() also reflects disabled ancestors. Preserve only our
+    // explicit flag, otherwise restoring during host startup permanently
+    // disables painting even after the host enables its own updates again.
+    const bool updatesDisabled = testAttribute(Qt::WA_ForceUpdatesDisabled);
+    QScopedValueRollback<bool> restoring(d->RestoringState, true);
+    auto visibilityGuard = qScopeGuard([this, wasHidden, updatesDisabled] {
+        if (!wasHidden)
+        {
+            show();
+        }
+        setUpdatesEnabled(!updatesDisabled);
+    });
+    setUpdatesEnabled(false);
+    if (!wasHidden)
+    {
+        hide();
+    }
+    Q_EMIT restoringState();
+    d->hideFloatingWidgets();
+    d->markDockWidgetsDirty();
+    // Empty each old area once, without activating neighbouring tabs or
+    // repeatedly pruning a layout tree which is about to be discarded.
+    const auto oldContainers = d->Containers;
+    for (auto container : oldContainers)
+    {
+        for (int j = 0; j < container->dockAreaCount(); ++j)
+        {
+            auto area = container->dockArea(j);
+            if (!area->isAutoHide())
+            {
+                area->detachDockWidgetsForRestore();
+            }
+        }
+    }
+    for (int i = 0; i < layout.containers.size(); ++i)
+    {
+        if (i >= d->Containers.size())
+        {
+            new CFloatingDockContainer(this);
+        }
+        auto container = d->Containers[i];
+        if (container->isFloating())
+        {
+            container->floatingWidget()->restoreState(layout.containers[i],
+                                                      widgets);
+        }
+        else
+        {
+            container->restoreState(layout.containers[i], widgets);
+        }
+    }
+    // Removal mutates FloatingWidgets: iterate a copy to avoid skipping entries.
+    const auto floating = d->FloatingWidgets;
+    for (int i = layout.containers.size() - 1; i < floating.size(); ++i)
+    {
+        if (auto widget = floating[i].data())
+        {
+            widget->finishDropOperation();
+        }
+    }
+    d->restoreDockWidgetsOpenState();
+    d->restoreDockAreasIndices();
+    for (auto container : d->Containers)
+    {
+        for (int i = 0; i < container->dockAreaCount(); ++i)
+        {
+            container->dockArea(i)->updateTitleBarVisibility();
+        }
+        if (container->isFloating())
+        {
+            container->floatingWidget()->updateWindowTitle();
+        }
+    }
+    d->emitTopLevelEvents();
+    d->RestoredFocusedDockWidget = layout.focusedWidget;
+    // Public completion and focus callbacks see a fully restored manager.
+    d->RestoringState = false;
+    if (!wasHidden)
+    {
+        show();
+    }
+    setUpdatesEnabled(!updatesDisabled);
+    visibilityGuard.dismiss();
+    Q_EMIT stateRestored();
+    if (auto focused = widgets.value(layout.focusedWidget))
+    {
+        setDockWidgetFocused(focused);
+    }
+    return true;
 }
 
 

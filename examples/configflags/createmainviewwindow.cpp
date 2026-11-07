@@ -76,8 +76,6 @@ void CreateMainViewWindow::SetupConfigFlagsTreeWidget()
       { "DockAreaHasCloseButton", "If the flag is set each dock area has a close button", ConfigFlag::DockAreaHasCloseButton, true },
       { "DockAreaCloseButtonClosesTab", "If the flag is set, the dock area close button closes the active tab, if not set, it closes the complete dock area", ConfigFlag::DockAreaCloseButtonClosesTab, false },
       { "OpaqueSplitterResize", "See QSplitter::setOpaqueResize() documentation", ConfigFlag::OpaqueSplitterResize, true },
-      { "XmlAutoFormattingEnabled", "If enabled, the XML writer automatically adds line-breaks and indentation to empty sections between elements (ignorable whitespace).", ConfigFlag::XmlAutoFormattingEnabled, false },
-      { "XmlCompressionEnabled", "If enabled, the XML output will be compressed and is not human readable anymore", ConfigFlag::XmlCompressionEnabled, true },
       { "TabCloseButtonIsToolButton", "If enabled the tab close buttons will be QToolButtons instead of QPushButtons - disabled by default", ConfigFlag::TabCloseButtonIsToolButton, false },
       { "AllTabsHaveCloseButton", "if this flag is set, then all tabs that are closable show a close button", ConfigFlag::AllTabsHaveCloseButton, false },
       { "RetainTabSizeWhenCloseButtonHidden", "if this flag is set, the space for the close button is reserved even if the close button is not visible", ConfigFlag::RetainTabSizeWhenCloseButtonHidden, false },

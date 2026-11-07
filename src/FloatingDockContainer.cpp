@@ -1159,21 +1159,17 @@ void CFloatingDockContainer::onDockAreaCurrentChanged(int Index)
 }
 
 //============================================================================
-bool CFloatingDockContainer::restoreState(CDockingStateReader &Stream,
-    bool Testing)
+void CFloatingDockContainer::restoreState(
+    const state::Container& saved, const QHash<QString, CDockWidget*>& widgets)
 {
-	if (!d->DockContainer->restoreState(Stream, Testing))
-	{
-		return false;
-	}
-	onDockAreasAddedOrRemoved();
+    d->DockContainer->restoreState(saved, widgets);
+    onDockAreasAddedOrRemoved();
 #if defined(Q_OS_UNIX) && !defined(Q_OS_MACOS)
 	if(d->TitleBar)
 	{
 		d->TitleBar->setMaximizedIcon(windowState() == Qt::WindowMaximized);
 	}
 #endif
-	return true;
 }
 
 

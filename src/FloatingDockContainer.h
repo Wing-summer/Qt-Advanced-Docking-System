@@ -29,9 +29,10 @@
 //============================================================================
 //                                   INCLUDES
 //============================================================================
-#include "ads_globals.h"
-
+#include <QHash>
 #include <QRubberBand>
+
+#include "ads_globals.h"
 
 #if defined(Q_OS_UNIX) && !defined(Q_OS_MACOS)
 #include <QDockWidget>
@@ -41,11 +42,14 @@
 #define tFloatingWidgetBase QWidget
 #endif
 
-class CDockingStateReader;
 QT_FORWARD_DECLARE_CLASS(QMimeData)
 
 namespace ads
 {
+namespace state
+{
+struct Container;
+}
 struct FloatingDockContainerPrivate;
 class CDockManager;
 struct DockManagerPrivate;
@@ -59,7 +63,7 @@ struct DockWidgetTabPrivate;
 class CDockAreaTitleBar;
 struct DockAreaTitleBarPrivate;
 class CFloatingWidgetTitleBar;
-class CDockingStateReader;
+
 class CFloatingDragPreview;
 
 /**
@@ -198,16 +202,14 @@ protected:
 	void moveFloating() override;
 
 	/**
-	 * Restores the state from given stream.
-	 * If Testing is true, the function only parses the data from the given
-	 * stream but does not restore anything. You can use this check for
-	 * faulty files before you start restoring the state
-	 */
-	bool restoreState(CDockingStateReader& Stream, bool Testing);
+     * Applies an already validated snapshot using resolved dock widgets.
+     */
+    void restoreState(const state::Container& saved,
+                      const QHash<QString, CDockWidget*>& widgets);
 
-	/**
-	 * Call this function to update the window title
-	 */
+    /**
+     * Call this function to update the window title
+     */
     void updateWindowTitle();
 
 protected: // reimplements QWidget

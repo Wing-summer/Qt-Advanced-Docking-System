@@ -33,8 +33,6 @@
 #include "ads_globals.h"
 #include "AutoHideTab.h"
 
-QT_FORWARD_DECLARE_CLASS(QXmlStreamWriter)
-
 namespace ads
 {
 struct AutoHideSideBarPrivate;
@@ -42,7 +40,6 @@ class DockContainerWidgetPrivate;
 class CDockContainerWidget;
 class CAutoHideTab;
 class CAutoHideDockContainer;
-class CDockingStateReader;
 
 /**
  * Side tab bar widget that is shown at the edges of a dock container.
@@ -74,13 +71,12 @@ protected:
 	/**
 	 * Saves the state into the given stream
 	 */
-	void saveState(QXmlStreamWriter& Stream) const;
 
-	/**
-	 * Inserts the given dock widget tab at the given position.
-	 * An Index value of -1 appends the side tab at the end.
-	 */
-	void insertTab(int Index, CAutoHideTab* SideTab);
+    /**
+     * Inserts the given dock widget tab at the given position.
+     * An Index value of -1 appends the side tab at the end.
+     */
+    void insertTab(int Index, CAutoHideTab* SideTab);
 
 public:
     using Super = QScrollArea;

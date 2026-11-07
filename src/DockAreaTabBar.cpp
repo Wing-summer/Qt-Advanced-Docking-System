@@ -27,23 +27,23 @@
 //============================================================================
 //                                   INCLUDES
 //============================================================================
-#include "FloatingDragPreview.h"
 #include "DockAreaTabBar.h"
 
-#include <QMouseEvent>
-#include <QScrollBar>
-#include <QDebug>
-#include <QBoxLayout>
 #include <QApplication>
-#include <QtGlobal>
-#include <QTimer>
+#include <QBoxLayout>
+#include <QDebug>
+#include <QMouseEvent>
 #include <QPointer>
+#include <QScrollBar>
+#include <QTimer>
+#include <QtGlobal>
 
-#include "FloatingDockContainer.h"
 #include "DockAreaWidget.h"
 #include "DockManager.h"
 #include "DockWidget.h"
 #include "DockWidgetTab.h"
+#include "FloatingDockContainer.h"
+#include "FloatingDragPreview.h"
 
 namespace ads
 {
@@ -207,6 +207,10 @@ void CDockAreaTabBar::insertTab(int Index, CDockWidgetTab* Tab)
             &CDockAreaTabBar::elidedChanged);
     Tab->installEventFilter(this);
 	Q_EMIT tabInserted(Index);
+    if (d->DockArea->dockManager()->isRestoringState())
+    {
+        return;
+    }
     if (Index <= d->CurrentIndex)
 	{
 		setCurrentIndex(d->CurrentIndex + 1);
@@ -227,6 +231,15 @@ void CDockAreaTabBar::removeTab(CDockWidgetTab* Tab)
 	{
 		return;
 	}
+    if (d->DockArea->dockManager()->isRestoringState())
+    {
+        Q_EMIT removingTab(d->TabsLayout->indexOf(Tab));
+        d->TabsLayout->removeWidget(Tab);
+        Tab->disconnect(this);
+        Tab->removeEventFilter(this);
+        d->CurrentIndex = -1;
+        return;
+    }
     ADS_PRINT("CDockAreaTabBar::removeTab ");
 	int NewCurrentIndex = currentIndex();
 	int RemoveIndex = d->TabsLayout->indexOf(Tab);

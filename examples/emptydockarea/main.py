@@ -20,7 +20,6 @@ class CMainWindow(MainWindowUI, MainWindowBase):
         self.setupUi(self)
 
         QtAds.CDockManager.setConfigFlag(QtAds.CDockManager.OpaqueSplitterResize, True)
-        QtAds.CDockManager.setConfigFlag(QtAds.CDockManager.XmlCompressionEnabled, False)
         QtAds.CDockManager.setConfigFlag(QtAds.CDockManager.FocusHighlighting, True)
         self.dock_manager = QtAds.CDockManager(self)
         

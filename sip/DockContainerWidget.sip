@@ -28,8 +28,6 @@ protected:
 	void addDockArea(ads::CDockAreaWidget* DockAreaWidget /Transfer/, ads::DockWidgetArea area = ads::CenterDockWidgetArea);
 	void removeDockArea(ads::CDockAreaWidget* area /TransferBack/);
     /*QList<QPointer<ads::CDockAreaWidget>> removeAllDockAreas();*/
-	void saveState(QXmlStreamWriter& Stream) const;
-	bool restoreState(CDockingStateReader& Stream, bool Testing);
 	ads::CDockAreaWidget* lastAddedDockAreaWidget(ads::DockWidgetArea area) const;
 	ads::CDockWidget* topLevelDockWidget() const;
 	ads::CDockAreaWidget* topLevelDockArea() const;

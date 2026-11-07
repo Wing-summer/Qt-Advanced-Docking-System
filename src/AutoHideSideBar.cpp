@@ -31,18 +31,16 @@
 #include "AutoHideSideBar.h"
 
 #include <QBoxLayout>
-#include <QStyleOption>
 #include <QPainter>
-#include <QXmlStreamWriter>
+#include <QStyleOption>
 #include <QWheelEvent>
 
-#include "DockContainerWidget.h"
-#include "DockWidgetTab.h"
-#include "DockFocusController.h"
 #include "AutoHideDockContainer.h"
-#include "DockAreaWidget.h"
-#include "DockingStateReader.h"
 #include "AutoHideTab.h"
+#include "DockAreaWidget.h"
+#include "DockContainerWidget.h"
+#include "DockFocusController.h"
+#include "DockWidgetTab.h"
 
 namespace ads
 {
@@ -393,30 +391,7 @@ SideBarLocation CAutoHideSideBar::sideBarLocation() const
 
 
 //============================================================================
-void CAutoHideSideBar::saveState(QXmlStreamWriter& s) const
-{
-	if (!count())
-	{
-		return;
-	}
 
-	s.writeStartElement("SideBar");
-	s.writeAttribute("Area", QString::number(sideBarLocation()));
-	s.writeAttribute("Tabs", QString::number(count()));
-
-	for (auto i = 0; i < count(); ++i)
-	{
-		auto Tab = tab(i);
-		if (!Tab)
-		{
-			continue;
-		}
-
-		Tab->dockWidget()->autoHideDockContainer()->saveState(s);
-	}
-
-	s.writeEndElement();
-}
 
 //===========================================================================
 QSize CAutoHideSideBar::minimumSizeHint() const

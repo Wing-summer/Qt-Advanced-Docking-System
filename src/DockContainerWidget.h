@@ -31,13 +31,11 @@
 //                                   INCLUDES
 //============================================================================
 #include <QFrame>
+#include <QHash>
 
-#include "ads_globals.h"
 #include "AutoHideTab.h"
 #include "DockWidget.h"
-
-QT_FORWARD_DECLARE_CLASS(QXmlStreamWriter)
-
+#include "ads_globals.h"
 
 namespace ads
 {
@@ -50,7 +48,10 @@ class CFloatingDockContainer;
 struct FloatingDockContainerPrivate;
 class CFloatingDragPreview;
 struct FloatingDragPreviewPrivate;
-class CDockingStateReader;
+namespace state
+{
+struct Container;
+}
 class CAutoHideSideBar;
 class CAutoHideTab;
 class CDockSplitter;
@@ -196,30 +197,28 @@ protected:
 	QList<QPointer<CDockAreaWidget>> removeAllDockAreas();
 
 	/**
-	 * Saves the state into the given stream
+	 * Captures a value-only layout snapshot
 	 */
-	void saveState(QXmlStreamWriter& Stream) const;
+    state::Container saveState() const;
 
-	/**
-	 * Restores the state from given stream.
-	 * If Testing is true, the function only parses the data from the given
-	 * stream but does not restore anything. You can use this check for
-	 * faulty files before you start restoring the state
-	 */
-	bool restoreState(CDockingStateReader& Stream, bool Testing);
+    /**
+     * Applies an already validated snapshot using resolved dock widgets.
+     */
+    void restoreState(const state::Container& saved,
+                      const QHash<QString, CDockWidget*>& widgets);
 
-	/**
-	 * This function returns the last added dock area widget for the given
-	 * area identifier or 0 if no dock area widget has been added for the given
-	 * area
-	 */
-	CDockAreaWidget* lastAddedDockAreaWidget(DockWidgetArea area) const;
+    /**
+     * This function returns the last added dock area widget for the given
+     * area identifier or 0 if no dock area widget has been added for the given
+     * area
+     */
+    CDockAreaWidget* lastAddedDockAreaWidget(DockWidgetArea area) const;
 
-	/**
-	 * If hasSingleVisibleDockWidget() returns true, this function returns the
-	 * one and only visible dock widget. Otherwise it returns a nullptr.
-	 */
-	CDockWidget* topLevelDockWidget() const;
+    /**
+     * If hasSingleVisibleDockWidget() returns true, this function returns the
+     * one and only visible dock widget. Otherwise it returns a nullptr.
+     */
+    CDockWidget* topLevelDockWidget() const;
 
 	/**
 	 * If the container has only one single visible dock area, then this

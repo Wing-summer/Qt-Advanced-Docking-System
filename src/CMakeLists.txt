@@ -86,7 +86,7 @@ set(ads_SRCS
     DockSplitter.cpp
     DockWidget.cpp
     DockWidgetTab.cpp
-    DockingStateReader.cpp
+    DockingState.cpp
     DockFocusController.cpp
     ElidingLabel.cpp
     FloatingDockContainer.cpp
@@ -113,7 +113,7 @@ set(ads_HEADERS
     DockSplitter.h
     DockWidget.h
     DockWidgetTab.h
-    DockingStateReader.h
+    DockingState.h
     DockFocusController.h
     ElidingLabel.h
     FloatingDockContainer.h

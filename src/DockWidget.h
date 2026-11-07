@@ -35,7 +35,6 @@
 #include "ads_globals.h"
 
 QT_FORWARD_DECLARE_CLASS(QToolBar)
-QT_FORWARD_DECLARE_CLASS(QXmlStreamWriter)
 
 namespace ads
 {
@@ -101,9 +100,9 @@ protected:
     void setToggleViewActionChecked(bool Checked);
 
     /**
-     * Saves the state into the given stream
+     * Return false to exclude this widget from saved layouts.
      */
-    virtual void saveState(QXmlStreamWriter& Stream) const;
+    virtual bool isStateSaveEnabled() const;
 
     /**
      * This is a helper function for the dock manager to flag this widget

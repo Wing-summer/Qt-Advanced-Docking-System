@@ -31,12 +31,12 @@
 //                                   INCLUDES
 //============================================================================
 #include <QFrame>
+#include <QHash>
 
-#include "ads_globals.h"
 #include "AutoHideTab.h"
 #include "DockWidget.h"
+#include "ads_globals.h"
 
-QT_FORWARD_DECLARE_CLASS(QXmlStreamWriter)
 QT_FORWARD_DECLARE_CLASS(QAbstractButton)
 QT_FORWARD_DECLARE_CLASS(QMenu)
 
@@ -47,7 +47,10 @@ class CDockManager;
 class CDockContainerWidget;
 class DockContainerWidgetPrivate;
 class CDockAreaTitleBar;
-class CDockingStateReader;
+namespace state
+{
+struct Node;
+}
 class CDockSplitter;
 
 
@@ -311,33 +314,37 @@ public:
 	void setCurrentDockWidget(CDockWidget* DockWidget);
 
 	/**
-	 * Saves the state into the given stream
+	 * Captures a value-only layout snapshot
 	 */
-	void saveState(QXmlStreamWriter& Stream) const;
+    state::Node saveState() const;
+    // Detach the old layout in bulk without selecting neighbouring tabs.
+    void detachDockWidgetsForRestore();
 
     /**
 	 * Restores a dock area.
-	 * \see restoreChildNodes() for details
+	 * Uses an already validated snapshot and resolved dock widgets.
 	 */
-    static bool restoreState(CDockingStateReader& Stream, CDockAreaWidget*& CreatedWidget,
-		bool Testing, CDockContainerWidget* ParentContainer);
+    static CDockAreaWidget* restoreState(
+        const state::Node& saved, CDockContainerWidget* container,
+        const QHash<QString, CDockWidget*>& widgets);
 
-	/**
-	 * This functions returns the dock widget features of all dock widget in
-	 * this area.
-	 * A bitwise and is used to combine the flags of all dock widgets. That
-	 * means, if only one single dock widget does not support a certain flag,
-	 * the whole dock are does not support the flag. I.e. if one single
-	 * dock widget in this area is not closable, the whole dock are is not
-	 * closable.
-	 */
-	CDockWidget::DockWidgetFeatures features(eBitwiseOperator Mode = BitwiseAnd) const;
+    /**
+     * This functions returns the dock widget features of all dock widget in
+     * this area.
+     * A bitwise and is used to combine the flags of all dock widgets. That
+     * means, if only one single dock widget does not support a certain flag,
+     * the whole dock are does not support the flag. I.e. if one single
+     * dock widget in this area is not closable, the whole dock are is not
+     * closable.
+     */
+    CDockWidget::DockWidgetFeatures features(
+        eBitwiseOperator Mode = BitwiseAnd) const;
 
-	/**
-	 * Returns the title bar button corresponding to the given title bar
-	 * button identifier
-	 */
-	QAbstractButton* titleBarButton(TitleBarButton which) const;
+    /**
+     * Returns the title bar button corresponding to the given title bar
+     * button identifier
+     */
+    QAbstractButton* titleBarButton(TitleBarButton which) const;
 
 	/**
 	 * Update the close button if visibility changed

@@ -6,8 +6,7 @@
   - [`DockAreaHasCloseButton`](#dockareahasclosebutton)
   - [`DockAreaCloseButtonClosesTab`](#dockareaclosebuttonclosestab)
   - [`OpaqueSplitterResize`](#opaquesplitterresize)
-  - [`XmlAutoFormattingEnabled`](#xmlautoformattingenabled)
-  - [`XmlCompressionEnabled`](#xmlcompressionenabled)
+  - [Binary layout state / 二进制布局状态](#binary-layout-state--二进制布局状态)
   - [`TabCloseButtonIsToolButton`](#tabclosebuttonistoolbutton)
   - [`AllTabsHaveCloseButton`](#alltabshaveclosebutton)
   - [`RetainTabSizeWhenCloseButtonHidden`](#retaintabsizewhenclosebuttonhidden)
@@ -152,16 +151,27 @@ configuration `DefaultNonOpaqueConfig`, then this is the configured behaviour.
 
 ![Non-opaque resizing](non_opaque_resizing.gif)
 
-### `XmlAutoFormattingEnabled`
+### Binary layout state / 二进制布局状态
 
-If enabled, the XML writer automatically adds line-breaks and indentation to
-empty sections between elements (ignorable whitespace). This is used, when
-the current state or perspective is saved. It is disabled by default.
+`saveState()` now writes an uncompressed, versioned binary snapshot and
+`restoreState()` validates and decodes it once before changing any widgets.
+The `QByteArray` and user-version arguments remain unchanged. Old XML layouts,
+including compressed XML, are rejected; applications keep their initial layout
+when restoring one fails. No migration is performed.
 
-### `XmlCompressionEnabled`
+`saveState()` 现在保存带版本号的未压缩二进制快照，`restoreState()` 在修改控件前
+完成一次解码和校验。`QByteArray` 和用户版本参数保持不变。旧 XML 布局（包括压缩
+XML）不再支持；恢复失败时应用保留初始布局，不执行迁移。
 
-If enabled, the XML output will be compressed and is not human readable anymore.
-This ie enabled by default to minimize the size of the saved data.
+The XML writer extension has been replaced by the protected virtual
+`CDockWidget::isStateSaveEnabled() const`, which returns `true` by default.
+Override it to return `false` for transient editor docks. XML formatting and
+compression flags have been removed; other C++ configuration bit values are
+unchanged. Rebuild subclasses and bindings against this API.
+
+原 XML 写入扩展点替换为受保护虚函数 `CDockWidget::isStateSaveEnabled() const`，
+默认返回 `true`；临时编辑器面板可重写并返回 `false`。XML 格式化和压缩标志已删除，
+其余 C++ 配置位值不变。派生类及绑定须使用新接口重新编译。
 
 ### `TabCloseButtonIsToolButton`
 

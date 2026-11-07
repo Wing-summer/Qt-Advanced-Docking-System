@@ -47,7 +47,6 @@ protected:
     void deleteContent();
 	void initFloatingGeometry(const QPoint& DragStartMousePos, const QSize& Size);
 	void moveFloating();
-	bool restoreState(ads::CDockingStateReader& Stream, bool Testing);
 	void updateWindowTitle();
 
 

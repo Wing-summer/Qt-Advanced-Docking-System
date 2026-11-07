@@ -29,20 +29,20 @@
 //============================================================================
 #include "AutoHideDockContainer.h"
 
-#include <QXmlStreamWriter>
-#include <QBoxLayout>
-#include <QPainter>
-#include <QSplitter>
-#include <QPointer>
 #include <QApplication>
+#include <QBoxLayout>
 #include <QCursor>
+#include <QPainter>
+#include <QPointer>
+#include <QSplitter>
 
-#include "DockManager.h"
-#include "DockAreaWidget.h"
-#include "ResizeHandle.h"
-#include "DockComponentsFactory.h"
 #include "AutoHideSideBar.h"
 #include "AutoHideTab.h"
+#include "DockAreaWidget.h"
+#include "DockComponentsFactory.h"
+#include "DockManager.h"
+#include "DockingState.h"
+#include "ResizeHandle.h"
 
 namespace ads
 {
@@ -460,13 +460,13 @@ void CAutoHideDockContainer::cleanupAndDelete()
 
 
 //============================================================================
-void CAutoHideDockContainer::saveState(QXmlStreamWriter& s)
+state::SideBarWidget CAutoHideDockContainer::saveState() const
 {
-	s.writeStartElement("Widget");
-	s.writeAttribute("Name", d->DockWidget->objectName());
-	s.writeAttribute("Closed", QString::number(d->DockWidget->isClosed() ? 1 : 0));
-    s.writeAttribute("Size", QString::number(d->isHorizontal() ? d->Size.height() : d->Size.width()));
-	s.writeEndElement();
+    state::SideBarWidget result;
+    result.widget = {d->DockWidget->objectName(), d->DockWidget->isClosed()};
+    result.location = sideBarLocation();
+    result.size = d->isHorizontal() ? d->Size.height() : d->Size.width();
+    return result;
 }
 
 

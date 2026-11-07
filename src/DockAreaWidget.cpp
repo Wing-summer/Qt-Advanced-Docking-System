@@ -39,7 +39,6 @@
 #include <QStackedLayout>
 #include <QStyle>
 #include <QWidget>
-#include <QXmlStreamWriter>
 
 #include <AutoHideDockContainer.h>
 #include <AutoHideTab.h>
@@ -52,7 +51,7 @@
 #include "DockSplitter.h"
 #include "DockWidget.h"
 #include "DockWidgetTab.h"
-#include "DockingStateReader.h"
+#include "DockingState.h"
 #include "ElidingLabel.h"
 #include "FloatingDockContainer.h"
 
@@ -89,17 +88,26 @@ private:
 	 * Detaches a widget without turning an existing native window into a top-level window.
 	 */
 	void detachWidget(QWidget* Widget)
-	{
-		CDockAreaWidget* DockArea = qobject_cast<CDockAreaWidget*>(m_ParentLayout->parentWidget());
-		if (Widget->internalWinId() && DockArea && DockArea->dockManager())
-		{
-			Widget->setParent(DockArea->dockManager());
-		}
-		else
+    {
+        auto area =
+            qobject_cast<CDockAreaWidget*>(m_ParentLayout->parentWidget());
+        if (area && area->dockManager()
+            && area->dockManager()->isRestoringState())
+        {
+            Widget->setParent(area->dockManager());
+            return;
+        }
+        CDockAreaWidget* DockArea =
+            qobject_cast<CDockAreaWidget*>(m_ParentLayout->parentWidget());
+        if (Widget->internalWinId() && DockArea && DockArea->dockManager())
+        {
+            Widget->setParent(DockArea->dockManager());
+        }
+        else
 		{
 			Widget->setParent(nullptr);
 		}
-	}
+    }
 
 public:
 	/**
@@ -155,36 +163,44 @@ public:
 		delete LayoutItem;
 	}
 
-	/**
-	 * Inserts the widget at the given index position into the internal widget
-	 * list
-	 */
-	void insertWidget(int index, QWidget* Widget)
-	{
-		detachWidget(Widget);
-		if (index < 0)
-		{
-			index = m_Widgets.count();
-		}
-		m_Widgets.insert(index, Widget);
-		if (m_CurrentIndex < 0)
-		{
-			setCurrentIndex(index);
-		}
-		else
-		{
-			if (index <= m_CurrentIndex )
+    // Clear once without activating tabs in the discarded area.
+    void clearForRestore()
+    {
+        removeCurrentWidgetFromBoxLayout();
+        m_CurrentWidget = nullptr;
+        m_CurrentIndex = -1;
+        m_Widgets.clear();
+    }
+
+    void insertWidget(int index, QWidget* Widget, bool Activate = true)
+    {
+        if (Activate)
+        {
+            detachWidget(Widget);
+        }
+        if (index < 0)
+        {
+            index = m_Widgets.count();
+        }
+        m_Widgets.insert(index, Widget);
+        if (m_CurrentIndex < 0 && Activate)
+        {
+            setCurrentIndex(index);
+        }
+        else
+        {
+            if (index <= m_CurrentIndex )
 			{
 				++m_CurrentIndex;
 			}
-		}
-	}
+        }
+    }
 
-	/**
-	 * Removes the given widget from the layout
-	 */
-	void removeWidget(QWidget* Widget)
-	{
+    /**
+     * Removes the given widget from the layout
+     */
+    void removeWidget(QWidget* Widget)
+    {
 		if (currentWidget() == Widget)
 		{
 			removeCurrentWidgetFromBoxLayout();
@@ -398,8 +414,8 @@ struct DockAreaWidgetPrivate
 		for (int i = 0; i < ContentsLayout->count(); ++i)
 		{
 			auto Widget = ContentsLayout->widget(i);
-			MinSizeHint.setHeight(qMax(MinSizeHint.height(), Widget->minimumSizeHint().height()));
-			MinSizeHint.setWidth(qMax(MinSizeHint.width(), Widget->minimumSizeHint().width()));
+			const auto Size = Widget->minimumSizeHint();
+			MinSizeHint = MinSizeHint.expandedTo(Size);
 		}
 	}
 };
@@ -591,11 +607,12 @@ void CDockAreaWidget::insertDockWidget(int index, CDockWidget* DockWidget,
 	{
 		index = d->ContentsLayout->count();
 	}
-	d->ContentsLayout->insertWidget(index, DockWidget);
-	DockWidget->setDockArea(this);
-	DockWidget->tabWidget()->setDockAreaWidget(this);
-	auto TabWidget = DockWidget->tabWidget();
-	// Inserting the tab will change the current index which in turn will
+    d->ContentsLayout->insertWidget(index, DockWidget,
+                                    !dockManager()->isRestoringState());
+    DockWidget->setDockArea(this);
+    DockWidget->tabWidget()->setDockAreaWidget(this);
+    auto TabWidget = DockWidget->tabWidget();
+    // Inserting the tab will change the current index which in turn will
 	// make the tab widget visible in the slot
 	d->tabBar()->blockSignals(true);
 	d->tabBar()->insertTab(index, TabWidget);
@@ -603,29 +620,44 @@ void CDockAreaWidget::insertDockWidget(int index, CDockWidget* DockWidget,
 	TabWidget->setVisible(!DockWidget->isClosed());
 	d->TitleBar->autoHideTitleLabel()->setText(DockWidget->windowTitle());
 	DockWidget->setProperty(INDEX_PROPERTY, index);
-	d->MinSizeHint.setHeight(qMax(d->MinSizeHint.height(), DockWidget->minimumSizeHint().height()));
-	d->MinSizeHint.setWidth(qMax(d->MinSizeHint.width(), DockWidget->minimumSizeHint().width()));
-	if (Activate)
-	{
-		setCurrentIndex(index);
+    if (!dockManager()->isRestoringState() || isAutoHide())
+    {
+        d->MinSizeHint = d->MinSizeHint.expandedTo(DockWidget->minimumSizeHint());
+    }
+    if (Activate)
+    {
+        setCurrentIndex(index);
 		DockWidget->setClosedState(false); // Set current index can show the widget without changing the close state, added to keep the close state consistent
 		if (!DockWidget->isClosed())
 		{
 			TabWidget->setVisible(true);
 		}
-	}
-	// If this dock area is hidden, then we need to make it visible again
+    }
+    // If this dock area is hidden, then we need to make it visible again
 	// by calling DockWidget->toggleViewInternal(true);
 	if (!this->isVisible() && d->ContentsLayout->count() > 1 && !dockManager()->isRestoringState())
 	{
 		DockWidget->toggleViewInternal(true);
 	}
-	d->updateTitleBarButtonStates();
-    updateTitleBarVisibility();
+    if (!dockManager()->isRestoringState() || isAutoHide())
+    {
+        d->updateTitleBarButtonStates();
+        updateTitleBarVisibility();
+    }
 }
 
 
 //============================================================================
+void CDockAreaWidget::detachDockWidgetsForRestore()
+{
+    const auto widgets = dockWidgets();
+    d->ContentsLayout->clearForRestore();
+    for (auto widget : widgets)
+    {
+        d->tabBar()->removeTab(widget->tabWidget());
+    }
+}
+
 void CDockAreaWidget::removeDockWidget(CDockWidget* DockWidget)
 {
     ADS_PRINT("CDockAreaWidget::removeDockWidget");
@@ -925,7 +957,10 @@ void CDockAreaWidget::toggleDockWidgetView(CDockWidget* DockWidget, bool Open)
 {
 	Q_UNUSED(DockWidget);
 	Q_UNUSED(Open);
-	updateTitleBarVisibility();
+    if (!dockManager()->isRestoringState())
+    {
+        updateTitleBarVisibility();
+    }
 }
 
 
@@ -1046,127 +1081,74 @@ void CDockAreaWidget::updateTitleBarButtonsToolTips()
 
 
 //============================================================================
-void CDockAreaWidget::saveState(QXmlStreamWriter& s) const
+state::Node CDockAreaWidget::saveState() const
 {
-	s.writeStartElement("Area");
-	s.writeAttribute("Tabs", QString::number(d->ContentsLayout->count()));
-	auto CurrentDockWidget = currentDockWidget();
-	QString Name = CurrentDockWidget ? CurrentDockWidget->objectName() : "";
-	s.writeAttribute("Current", Name);
-
-	if (d->AllowedAreas != DefaultAllowedAreas)
-	{
-		s.writeAttribute("AllowedAreas", QString::number(d->AllowedAreas, 16));
-	}
-
-	if (d->Flags != DefaultFlags)
-	{
-		s.writeAttribute("Flags", QString::number(d->Flags, 16));
-	}
-    ADS_PRINT("CDockAreaWidget::saveState TabCount: " << d->ContentsLayout->count()
-            << " Current: " << Name);
-	for (int i = 0; i < d->ContentsLayout->count(); ++i)
-	{
-		dockWidget(i)->saveState(s);
-	}
-	s.writeEndElement();
+    state::Node result;
+    result.splitter = false;
+    result.allowedAreas = int(d->AllowedAreas);
+    result.flags = int(d->Flags);
+    for (int i = 0; i < dockWidgetsCount(); ++i)
+    {
+        auto widget = dockWidget(i);
+        if (widget->isStateSaveEnabled())
+        {
+            result.widgets.append({widget->objectName(), widget->isClosed()});
+            if (widget == currentDockWidget())
+            {
+                result.current = widget->objectName();
+            }
+        }
+    }
+    return result;
 }
 
 
 //============================================================================
-bool CDockAreaWidget::restoreState(CDockingStateReader& s, CDockAreaWidget*& CreatedWidget,
-		bool Testing, CDockContainerWidget* Container)
+CDockAreaWidget* CDockAreaWidget::restoreState(
+    const state::Node& saved, CDockContainerWidget* container,
+    const QHash<QString, CDockWidget*>& widgets)
 {
-	bool Ok;
-#ifdef ADS_DEBUG_PRINT
-	int Tabs = s.attributes().value("Tabs").toInt(&Ok);
-	if (!Ok)
-	{
-		return false;
-	}
-#endif
-
-	QString CurrentDockWidget = s.attributes().value("Current").toString();
-    ADS_PRINT("Restore NodeDockArea Tabs: " << Tabs << " Current: "
-            << CurrentDockWidget);
-
-    auto DockManager = Container->dockManager();
-	CDockAreaWidget* DockArea = nullptr;
-	if (!Testing)
-	{
-		DockArea = new CDockAreaWidget(DockManager, Container);
-		const auto AllowedAreasAttribute = s.attributes().value("AllowedAreas");
-		if (!AllowedAreasAttribute.isEmpty())
-		{
-			DockArea->setAllowedAreas((DockWidgetArea)AllowedAreasAttribute.toInt(nullptr, 16));
-		}
-
-		const auto FlagsAttribute = s.attributes().value("Flags");
-		if (!FlagsAttribute.isEmpty())
-		{
-			DockArea->setDockAreaFlags((CDockAreaWidget::DockAreaFlags)FlagsAttribute.toInt(nullptr, 16));
-		}
-	}
-
-	while (s.readNextStartElement())
-	{
-        if (s.name() != QLatin1String("Widget"))
-		{
-			continue;
-		}
-
-		auto ObjectName = s.attributes().value("Name");
-		if (ObjectName.isEmpty())
-		{
-			return false;
-		}
-
-		bool Closed = s.attributes().value("Closed").toInt(&Ok);
-		if (!Ok)
-		{
-			return false;
-		}
-
-		s.skipCurrentElement();
-		CDockWidget* DockWidget = DockManager->findDockWidget(ObjectName.toString());
-		if (!DockWidget || Testing)
-		{
-			continue;
-		}
-
-        ADS_PRINT("Dock Widget found - parent " << DockWidget->parent());
-        if (DockWidget->autoHideDockContainer())
+    CDockAreaWidget* area = nullptr;
+    CDockWidget* current = nullptr;
+    for (const auto& entry : saved.widgets)
+    {
+        auto widget = widgets.value(entry.name);
+        if (!widget)
         {
-        	DockWidget->autoHideDockContainer()->cleanupAndDelete();
+            continue;
         }
-
-		// We hide the DockArea here to prevent the short display (the flashing)
-		// of the dock areas during application startup
-		DockArea->hide();
-        DockArea->addDockWidget(DockWidget);
-		DockWidget->setToggleViewActionChecked(!Closed);
-		DockWidget->setClosedState(Closed);
-		DockWidget->setProperty(internal::ClosedProperty, Closed);
-		DockWidget->setProperty(internal::DirtyProperty, false);
-	}
-
-	if (Testing)
-	{
-		return true;
-	}
-
-	if (!DockArea->dockWidgetsCount())
-	{
-		delete DockArea;
-		DockArea = nullptr;
-	}
-	else
-	{
-		DockArea->setProperty("currentDockWidget", CurrentDockWidget);
-	}
-
-	CreatedWidget = DockArea;
-	return true;
+        if (!area)
+        {
+            area = new CDockAreaWidget(container->dockManager(), container);
+            area->hide();
+            area->setAllowedAreas(DockWidgetArea(saved.allowedAreas));
+            area->setDockAreaFlags(DockAreaFlags(saved.flags));
+        }
+        if (widget->autoHideDockContainer())
+        {
+            widget->autoHideDockContainer()->cleanupAndDelete();
+        }
+        widget->setClosedState(entry.closed);
+        area->insertDockWidget(area->dockWidgetsCount(), widget, false);
+        // Keep former active pages hidden until the saved tab is selected.
+        widget->hide();
+        widget->setToggleViewActionChecked(!entry.closed);
+        widget->setProperty(internal::ClosedProperty, entry.closed);
+        widget->setProperty(internal::DirtyProperty, false);
+        if (!entry.closed && (!current || entry.name == saved.current))
+        {
+            current = widget;
+        }
+    }
+    if (area)
+    {
+        area->d->updateMinimumSizeHint();
+        area->d->updateTitleBarButtonStates();
+        area->updateTitleBarVisibility();
+        area->setProperty("currentDockWidget",
+                          current ? current->objectName() : QString());
+    }
+    return area;
 }
 
 

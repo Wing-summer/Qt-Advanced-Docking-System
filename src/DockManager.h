@@ -205,8 +205,6 @@ public:
 		DockAreaHasCloseButton = 0x0002,     //!< If the flag is set each dock area has a close button
 		DockAreaCloseButtonClosesTab = 0x0004,//!< If the flag is set, the dock area close button closes the active tab, if not set, it closes the complete dock area
 		OpaqueSplitterResize = 0x0008, //!< See QSplitter::setOpaqueResize() documentation
-		XmlAutoFormattingEnabled = 0x0010,//!< If enabled, the XML writer automatically adds line-breaks and indentation to empty sections between elements (ignorable whitespace).
-		XmlCompressionEnabled = 0x0020,//!< If enabled, the XML output will be compressed and is not human readable anymore
 		TabCloseButtonIsToolButton = 0x0040,//! If enabled the tab close buttons will be QToolButtons instead of QPushButtons - disabled by default
 		AllTabsHaveCloseButton = 0x0080, //!< if this flag is set, then all tabs that are closable show a close button
 		RetainTabSizeWhenCloseButtonHidden = 0x0100, //!< if this flag is set, the space for the close button is reserved even if the close button is not visible
@@ -247,7 +245,6 @@ public:
 
 		DefaultBaseConfig = DefaultDockAreaButtons
 		                  | ActiveTabHasCloseButton
-		                  | XmlCompressionEnabled
 		                  | FloatingContainerHasWidgetTitle
 		                  | DoubleClickUndocksWidget, ///< default base configuration settings
 
@@ -521,31 +518,27 @@ public:
 	 */
 	unsigned int zOrderIndex() const override;
 
-	/**
-	 * Saves the current state of the dockmanger and all its dock widgets
-	 * into the returned QByteArray.
-	 * The XmlMode enables / disables the auto formatting for the XmlStreamWriter.
-	 * If auto formatting is enabled, the output is intended and line wrapped.
-	 * The XmlMode XmlAutoFormattingDisabled is better if you would like to have
-	 * a more compact XML output - i.e. for storage in ini files.
-	 * The version number is stored as part of the data.
-	 * To restore the saved state, pass the return value and version number
-	 * to restoreState().
-	 * \see restoreState()
-	 */
-	QByteArray saveState(int version = 0) const;
+    /**
+     * Saves the current state of the dockmanger and all its dock widgets
+     * into the returned QByteArray.
+     * Saves the layout in the versioned ADS binary format.
+     * Older XML layouts are not supported. Pass the same user version
+     * to restoreState().
+     * \see restoreState()
+     */
+    QByteArray saveState(int version = 0) const;
 
-	/**
-	 * Restores the state of this dockmanagers dockwidgets.
-	 * The version number is compared with that stored in state. If they do
-	 * not match, the dockmanager's state is left unchanged, and this function
-	 * returns false; otherwise, the state is restored, and this function
-	 * returns true.
-	 * \see saveState()
-	 */
-	bool restoreState(const QByteArray &state, int version = 0);
+    /**
+     * Restores the state of this dockmanagers dockwidgets.
+     * The version number is compared with that stored in state. If they do
+     * not match, the dockmanager's state is left unchanged, and this function
+     * returns false; otherwise, the state is restored, and this function
+     * returns true.
+     * \see saveState()
+     */
+    bool restoreState(const QByteArray& state, int version = 0);
 
-	/**
+    /**
 	 * Saves the current perspective to the internal list of perspectives.
 	 * A perspective is the current state of the dock manager assigned
 	 * with a certain name. This makes it possible for the user,

@@ -15,7 +15,6 @@ class CAutoHideSideBar : QScrollArea
 
 protected:
 	virtual bool eventFilter(QObject *watched, QEvent *event);
-	void saveState(QXmlStreamWriter& Stream) const;
 	void insertTab(int Index, ads::CAutoHideTab* SideTab /Transfer/);
 
 public:

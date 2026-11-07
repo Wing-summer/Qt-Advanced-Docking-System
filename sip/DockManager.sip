@@ -151,8 +151,6 @@ public:
 		DockAreaHasCloseButton,
 		DockAreaCloseButtonClosesTab,
 		OpaqueSplitterResize,
-		XmlAutoFormattingEnabled,
-		XmlCompressionEnabled,
 		TabCloseButtonIsToolButton,
 		AllTabsHaveCloseButton,
 		RetainTabSizeWhenCloseButtonHidden,

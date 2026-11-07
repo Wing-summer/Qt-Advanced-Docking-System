@@ -28,37 +28,34 @@
 //============================================================================
 //                                   INCLUDES
 //============================================================================
+#include "DockWidget.h"
+
+#include <QAction>
+#include <QBoxLayout>
+#include <QDebug>
+#include <QEvent>
+#include <QGuiApplication>
+#include <QPointer>
+#include <QScreen>
+#include <QScrollArea>
+#include <QSplitter>
+#include <QStack>
+#include <QTextStream>
+#include <QToolBar>
+#include <QWindow>
+
 #include <AutoHideDockContainer.h>
 #include <AutoHideSideBar.h>
 #include <AutoHideTab.h>
-#include "DockWidgetTab.h"
-#include "DockWidget.h"
 
-#include <QBoxLayout>
-#include <QAction>
-#include <QSplitter>
-#include <QStack>
-#include <QScrollArea>
-#include <QTextStream>
-#include <QPointer>
-#include <QEvent>
-#include <QDebug>
-#include <QToolBar>
-#include <QXmlStreamWriter>
-#include <QWindow>
-
-#include <QGuiApplication>
-#include <QScreen>
-#include <QWindow>
-
-#include "DockContainerWidget.h"
 #include "DockAreaWidget.h"
-#include "DockManager.h"
-#include "FloatingDockContainer.h"
-#include "DockSplitter.h"
 #include "DockComponentsFactory.h"
+#include "DockContainerWidget.h"
+#include "DockManager.h"
+#include "DockSplitter.h"
+#include "DockWidgetTab.h"
+#include "FloatingDockContainer.h"
 #include "ads_globals.h"
-
 
 namespace ads
 {
@@ -208,11 +205,12 @@ void DockWidgetPrivate::showDockWidget()
 
         // If this widget is pinned and there are no opened dock widgets, unpin the auto hide widget by moving it's contents to parent container
 		// While restoring state, opened dock widgets are not valid
-		if (Container->openedDockWidgets().count() == 0 && DockArea->isAutoHide() && !DockManager->isRestoringState())
-		{
-			DockArea->autoHideDockContainer()->moveContentsToParent();
-		}
-	}
+        if (!DockManager->isRestoringState() && DockArea->isAutoHide()
+            && Container->openedDockWidgets().count() == 0)
+        {
+            DockArea->autoHideDockContainer()->moveContentsToParent();
+        }
+    }
 }
 
 
@@ -790,16 +788,18 @@ void CDockWidget::toggleView(bool Open)
 void CDockWidget::toggleViewInternal(bool Open)
 {
 	CDockContainerWidget* DockContainer = dockContainer();
-	CDockWidget* TopLevelDockWidgetBefore = DockContainer
-		? DockContainer->topLevelDockWidget() : nullptr;
+    const bool restoring = dockManager()->isRestoringState();
+    CDockWidget* TopLevelDockWidgetBefore =
+        !restoring && DockContainer ? DockContainer->topLevelDockWidget() :
+                                      nullptr;
 
-	d->Closed = !Open;
+    d->Closed = !Open;
 
-	if (Open)
-	{
-		d->showDockWidget();
-	}
-	else
+    if (Open)
+    {
+        d->showDockWidget();
+    }
+    else
 	{
 		d->hideDockWidget();
 	}
@@ -825,21 +825,22 @@ void CDockWidget::toggleViewInternal(bool Open)
 	// this dock widget was unassigned before the call to showDockWidget() then
 	// it has a dock container now
 	DockContainer = dockContainer();
-	CDockWidget* TopLevelDockWidgetAfter = DockContainer
-		? DockContainer->topLevelDockWidget() : nullptr;
-	CDockWidget::emitTopLevelEventForWidget(TopLevelDockWidgetAfter, true);
-	CFloatingDockContainer* FloatingContainer = DockContainer
-		? DockContainer->floatingWidget() : nullptr;
-	if (FloatingContainer)
-	{
-		FloatingContainer->updateWindowTitle();
-	}
+    CDockWidget* TopLevelDockWidgetAfter =
+        !restoring && DockContainer ? DockContainer->topLevelDockWidget() :
+                                      nullptr;
+    CDockWidget::emitTopLevelEventForWidget(TopLevelDockWidgetAfter, true);
+    CFloatingDockContainer* FloatingContainer =
+        DockContainer ? DockContainer->floatingWidget() : nullptr;
+    if (FloatingContainer && !restoring)
+    {
+        FloatingContainer->updateWindowTitle();
+    }
 
-	if (!Open)
-	{
-		Q_EMIT closed();
-	}
-	Q_EMIT viewToggled(Open);
+    if (!Open)
+    {
+        Q_EMIT closed();
+    }
+    Q_EMIT viewToggled(Open);
 }
 
 
@@ -848,17 +849,21 @@ void CDockWidget::setDockArea(CDockAreaWidget* DockArea)
 {
 	d->DockArea = DockArea;
 	d->ToggleViewAction->setChecked(DockArea != nullptr && !this->isClosed());
-	setParent(DockArea);
+    if (!DockArea && d->DockManager && d->DockManager->isRestoringState())
+    {
+        setParent(d->DockManager);
+    }
+    else
+    {
+        setParent(DockArea);
+    }
 }
 
 
 //============================================================================
-void CDockWidget::saveState(QXmlStreamWriter& s) const
+bool CDockWidget::isStateSaveEnabled() const
 {
-	s.writeStartElement("Widget");
-	s.writeAttribute("Name", objectName());
-	s.writeAttribute("Closed", QString::number(d->Closed ? 1 : 0));
-	s.writeEndElement();
+    return true;
 }
 
 

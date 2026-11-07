@@ -25,7 +25,6 @@ CMainWindow::CMainWindow(QWidget *parent)
 {
     ui->setupUi(this);
     CDockManager::setConfigFlag(CDockManager::OpaqueSplitterResize, true);
-    CDockManager::setConfigFlag(CDockManager::XmlCompressionEnabled, false);
     CDockManager::setConfigFlag(CDockManager::FocusHighlighting, true);
     CDockManager::setConfigFlag(CDockManager::TabsAtBottom, true);
     CDockManager::setAutoHideConfigFlags(CDockManager::DefaultAutoHideConfig);

@@ -34,17 +34,19 @@
 #include <QSplitter>
 #include "AutoHideTab.h"
 
-QT_FORWARD_DECLARE_CLASS(QXmlStreamWriter)
-
 namespace ads
 {
+namespace state
+{
+struct SideBarWidget;
+}
 struct AutoHideDockContainerPrivate;
 class CDockManager;
 class CDockWidget;
 class CDockContainerWidget;
 class CAutoHideSideBar;
 class CDockAreaWidget;
-class CDockingStateReader;
+
 struct SideTabBarPrivate;
 
 /**
@@ -75,7 +77,8 @@ protected:
 	/*
 	 * Saves the state and size
 	 */
-	void saveState(QXmlStreamWriter& Stream);
+    friend class CDockContainerWidget;
+    state::SideBarWidget saveState() const;
 
 public:
 	using Super = QFrame;

@@ -163,8 +163,7 @@ enum SideBarLocation
 
 namespace internal
 {
-static constexpr const bool RestoreTesting = true;
-static constexpr const bool Restore = false;
+
 static constexpr const char* const ClosedProperty = "close";
 static constexpr const char* const DirtyProperty = "dirty";
 static constexpr const char* const LocationProperty = "Location";

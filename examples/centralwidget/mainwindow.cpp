@@ -33,7 +33,6 @@ CMainWindow::CMainWindow(QWidget *parent)
 {
     ui->setupUi(this);
     CDockManager::setConfigFlag(CDockManager::OpaqueSplitterResize, true);
-    CDockManager::setConfigFlag(CDockManager::XmlCompressionEnabled, false);
     CDockManager::setConfigFlag(CDockManager::FocusHighlighting, true);
     DockManager = new CDockManager(this);
 
