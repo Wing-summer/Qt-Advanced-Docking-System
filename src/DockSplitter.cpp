@@ -107,7 +107,7 @@ bool CDockSplitter::isResizingWithContainer() const
 {
     for (auto& area : findChildren<CDockAreaWidget*>())
     {
-        if(area->isCentralWidgetArea())
+        if(area->containsCentralWidget())
         {
             return true;
         }

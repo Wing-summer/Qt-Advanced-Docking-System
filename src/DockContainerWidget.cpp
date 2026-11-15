@@ -882,7 +882,9 @@ bool DockContainerWidgetPrivate::widgetResizesWithContainer(QWidget* widget)
     auto Area = qobject_cast<CDockAreaWidget*>(widget);
     if(Area)
     {
-        return Area->isCentralWidgetArea();
+        // Other tabs, including closed plugin tabs, do not change which
+        // area absorbs container resizes.
+        return Area->containsCentralWidget();
     }
 
     auto innerSplitter = qobject_cast<CDockSplitter*>(widget);
